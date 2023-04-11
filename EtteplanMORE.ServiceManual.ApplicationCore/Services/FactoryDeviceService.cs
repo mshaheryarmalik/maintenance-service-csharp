@@ -1,51 +1,84 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using EtteplanMORE.ServiceManual.ApplicationCore.Entities;
 using EtteplanMORE.ServiceManual.ApplicationCore.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace EtteplanMORE.ServiceManual.ApplicationCore.Services
 {
+    public class FactoryDeviceDbContext : DbContext
+    {
+        public FactoryDeviceDbContext(DbContextOptions<FactoryDeviceDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<FactoryDevice> FactoryDevices { get; set; }
+    }
+
+
     public class FactoryDeviceService : IFactoryDeviceService
     {
-        /// <summary>
-        ///     Remove this. Temporary device storage before proper data storage is implemented.
-        /// </summary>
-        private static readonly ImmutableList<FactoryDevice> TemporaryDevices = new List<FactoryDevice>
+        private readonly FactoryDeviceDbContext _dbContext;
+
+        public FactoryDeviceService()
         {
-            new FactoryDevice
-            {
-                Id = 1,
-                Name = "Device X",
-                Year = 2001,
-                Type = "Type 10"
-            },
-            new FactoryDevice
-            {
-                Id = 2,
-                Name = "Device Y",
-                Year = 2012,
-                Type = "Type 3"
-            },
-            new FactoryDevice
-            {
-                Id = 3,
-                Name = "Device Z",
-                Year = 1985,
-                Type = "Type 1"
-            }
-        }.ToImmutableList();
+        }
+
+        public FactoryDeviceService(FactoryDeviceDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
 
         public async Task<IEnumerable<FactoryDevice>> GetAll()
         {
-            return await Task.FromResult(TemporaryDevices);
+            return await _dbContext.FactoryDevices.ToListAsync();
         }
 
         public async Task<FactoryDevice> Get(int id)
         {
-            return await Task.FromResult(TemporaryDevices.FirstOrDefault(c => c.Id == id));
+            return await _dbContext.FactoryDevices.FindAsync(id);
         }
+
+        public async Task<FactoryDevice> Create(FactoryDevice device)
+        {
+            _dbContext.FactoryDevices.Add(device);
+            await _dbContext.SaveChangesAsync();
+            return device;
+        }
+
+        public async Task<FactoryDevice> Update(FactoryDevice device)
+        {
+            _dbContext.Entry(device).State = EntityState.Modified;
+            await _dbContext.SaveChangesAsync();
+            return device;
+        }
+
+        public async Task<bool> Delete(int id)
+        {
+            var device = await _dbContext.FactoryDevices.FindAsync(id);
+            if (device == null)
+                return false;
+
+            _dbContext.FactoryDevices.Remove(device);
+            await _dbContext.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<IEnumerable<FactoryDevice>> FilterDevicesByType(string type)
+        {
+            var query = _dbContext.FactoryDevices.AsQueryable();
+
+            if (!string.IsNullOrEmpty(type))
+            {
+                query = query.Where(d => EF.Functions.Like(d.Type, $"%{type}%"));
+            }
+
+            return await query.ToListAsync();
+        }
+
     }
 }

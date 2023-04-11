@@ -8,7 +8,10 @@ namespace EtteplanMORE.ServiceManual.ApplicationCore.Interfaces
     public interface IFactoryDeviceService
     {
         Task<IEnumerable<FactoryDevice>> GetAll();
-
         Task<FactoryDevice> Get(int id);
+        Task<FactoryDevice> Create(FactoryDevice factoryDevice);
+        Task<FactoryDevice> Update(FactoryDevice factoryDevice);
+        Task<bool> Delete(int id);
+        Task<IEnumerable<FactoryDevice>> FilterDevicesByType(string type);
     }
 }
